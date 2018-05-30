@@ -83,7 +83,7 @@ def worker_sync():
         currentTime = time.time()
         if currentTime - lastSyncTime >= SYNC_INTERVAL:
             printQueue.put("Syncing to " + JOB_LIST_FILENAME)
-            with open(JOB_LIST_FILENAME) as f:
+            with open(JOB_LIST_FILENAME, 'w') as f:
                 f.write(json.dumps(list(jobQueue.queue)))
             lastSyncTime = currentTime
         syncRequestQueue.task_done()
@@ -143,5 +143,4 @@ for i in range(NUM_THREADS):
      t.start()
 
 jobQueue.join()
-
-# printQueue.join()
+os.system('shutdown /t 60')
