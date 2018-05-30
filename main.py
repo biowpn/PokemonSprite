@@ -12,7 +12,7 @@ JOB_LIST_FILENAME = 'targets.txt'
 TARGET_FOLDER_NAME = 'Sprites_all'
 
 # in seconds
-SYNC_INTERVAL = 30
+SYNC_INTERVAL = 15
 
 USER_AGENT = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
 NUM_THREADS = 16
@@ -85,7 +85,7 @@ def worker_sync():
             printQueue.put("Syncing to " + JOB_LIST_FILENAME)
             with open(JOB_LIST_FILENAME) as f:
                 f.write(json.dumps(list(jobQueue.queue)))
-        lastSyncTime = currentTime
+            lastSyncTime = currentTime
         syncRequestQueue.task_done()
 
 
@@ -107,7 +107,7 @@ def worker():
                     filepath = os.path.join(subFolderPath, filename)
                     if not os.path.isdir(subFolderPath):
                         os.mkdir(subFolderPath)
-                    if not os.path.isfile(job[2]):
+                    if not os.path.isfile(filepath):
                         jobQueue.put(['retrieve', url, filepath])
                         
         elif job[0] == 'retrieve': # download an image
