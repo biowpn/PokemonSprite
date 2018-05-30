@@ -103,16 +103,16 @@ def worker():
             for url in p.img_urls:
                 filename = url.split('/')[-1]
                 if dex in filename or name.lower() in filename.lower():
-                    j = ['retrieve', url, os.path.join(TARGET_FOLDER_NAME, job[1], filename)]
-                    jobQueue.put(j)
+                    subFolderPath = os.path.join(TARGET_FOLDER_NAME, dex)
+                    filepath = os.path.join(subFolderPath, filename)
+                    if not os.path.isdir(subFolderPath):
+                        os.mkdir(subFolderPath)
+                    if not os.path.isfile(job[2]):
+                        jobQueue.put(['retrieve', url, filepath])
                         
         elif job[0] == 'retrieve': # download an image
-            subFolderPath = os.path.split(job[2])[0]
-            if not os.path.isdir(subFolderPath):
-                os.mkdir(subFolderPath)
-            if not os.path.isfile(job[2]):
-                printQueue.put("Downloading: " + job[1])
-                download_file(job[1], job[2])
+            printQueue.put("Downloading: " + job[1])
+            download_file(job[1], job[2])
 
         syncRequestQueue.put(0)
         jobQueue.task_done()
