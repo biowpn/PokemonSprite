@@ -6,7 +6,7 @@ import os, time, json, threading, queue, re
 
 # Basics
 NumThreads = 16
-MaxNumOfFiles = 20000
+MaxNumOfFiles = 140000
 PageLimit = 1000
 BaseUrl = "https://archives.bulbagarden.net/w/index.php"
 QueryModel = {
@@ -21,19 +21,17 @@ GrandFolder = "Sprites_all"
 
 # The file to record queued tasks
 JobsQueuedFilename = 'queue.txt'
-# The file to record done tasks
-JobsDoneFilename = 'done.txt'
 
 # Only files matched these patterns will be downloaded
 # File matched the i-th pattern will be downloaded to a folder named "Pattern[i]"
 Patterns = [
     "[0-9]{3}[A-Z]*[A-z]*MS\.png",
-    "120px-Shuffle[0-9]{3}\.png",
-    "120px-[0-9]{3}[A-Z|a-z]{1}[A-Z|a-z|\.|\-|\:]*\.png"
+    "Shuffle[0-9]{3}\.png",
+    "[0-9]{3}[A-Z|a-z]{1}[A-Z|a-z|\.|\-|\:]*\.png"
 ]
 
 # in seconds
-SyncIntervalS = 15
+SyncIntervalS = 5
 
 DefaultUserAgent = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
 
@@ -43,9 +41,6 @@ if not os.path.isdir(GrandFolder):
     os.mkdir(GrandFolder)
 if not os.path.isfile(JobsQueuedFilename):
     with open(JobsQueuedFilename, 'w') as F:
-        F.write('[]')
-if not os.path.isfile(JobsDoneFilename):
-    with open(JobsDoneFilename, 'w') as F:
         F.write('[]')
 
 def get_raw_data(url, headers=dict()):
@@ -107,16 +102,15 @@ def worker_print():
 
 
 def worker_sync():
+    hasEnded = False
     lastSyncTime = time.time()
-    while True:
-        forced = syncRequestQueue.get()
+    while not hasEnded:
+        hasEnded = syncRequestQueue.get()
         currentTime = time.time()
-        if forced or currentTime - lastSyncTime >= SyncIntervalS:
-            printQueue.put("Syncing Progess...")
+        if hasEnded or currentTime - lastSyncTime >= SyncIntervalS:
+            printQueue.put("Saving Progess...")
             with open(JobsQueuedFilename, 'w') as f:
                 f.write(json.dumps(list(jobQueue.queue)))
-            with open(JobsDoneFilename, 'w') as f:
-                f.write(json.dumps(jobsDoneList))
             lastSyncTime = currentTime
         syncRequestQueue.task_done()
 
@@ -160,14 +154,12 @@ def worker():
         else:
             syncRequestQueue.put(0)
             
-        jobsDoneList.append(job)
         jobQueue.task_done()
 
 
 printQueue = queue.Queue()
 syncRequestQueue = queue.Queue()
 jobQueue = queue.Queue()
-jobsDoneList = []
 
 def main():
     pt = threading.Thread(target=worker_print)
@@ -178,21 +170,11 @@ def main():
     st.daemon = True
     st.start()
 
-    startOffset = 0
-    with open(JobsDoneFilename) as f:
-        for j in json.load(f):
-            jobsDoneList.append(j)
-            if j.get('cmd') == 'parse':
-                q = parse.parse_qs(parse.urlparse(j.get('url')).query)
-                startOffset = max(int(q.get('offset', [0])[0]), startOffset) 
     with open(JobsQueuedFilename) as f:
         for j in json.load(f):
             jobQueue.put(j)
-            if j.get('cmd') == 'parse':
-                q = parse.parse_qs(parse.urlparse(j.get('url')).query)
-                startOffset = max(int(q.get('offset', [0])[0]), startOffset)
                 
-    offset = startOffset
+    offset = 0
     while offset < MaxNumOfFiles:
         q = QueryModel.copy()
         q['offset'] = offset
